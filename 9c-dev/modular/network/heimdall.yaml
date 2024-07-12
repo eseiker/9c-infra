@@ -16,6 +16,10 @@ global:
   planet: HeimdallInternal
   consensusType: pbft
 
+  useTurnServer: true
+  iceServers:
+  - "turn://0ed3e48007413e7c2e638f13ddd75ad272c6c507e081bd76a75e4b7adc86c9af:0apejou+ycZFfwtREeXFKdfLj2gCclKzz5ZJ49Cmy6I=@turn-us.planetarium.dev:3478"
+
   resetSnapshot: true
   rollbackSnapshot: false
 
@@ -35,12 +39,7 @@ externalSecret:
   prefix: "9c-internal-v2/heimdall"
 
 ingress:
-  enabled: true
-  hosts:
-    dataProvider: "heimdall-internal-dp.9c.gg"
-    marketService: "heimdall-internal-market.9c.gg"
-    patrolRewardService: "heimdall-internal-patrol.9c.gg"
-    worldBoss: "heimdall-internal-world-boss.9c.gg"
+  enabled: false
 
 bridgeService:
   enabled: true
@@ -95,12 +94,6 @@ dataProvider:
 
   db:
     local: true
-    database: ""
-    connectionString: ""
-    host: ""
-    port: 3306
-    user: user
-    password: ""
 
 marketService:
   enabled: true
@@ -125,7 +118,7 @@ patrolRewardService:
 
 remoteHeadless:
   enabled: true
-  count: 1
+  count: 3
 
   env:
   - name: Headless__AccessControlService__AccessControlServiceType
@@ -141,36 +134,13 @@ remoteHeadless:
   storage:
     data: 500Gi
 
-  hosts:
-  - "heimdall-internal-rpc-1.nine-chronicles.com"
-
   loggingEnabled: true
 
   extraArgs:
   - --planet=HeimdallInternal
 
 rudolfService:
-  enabled: true
-
-  config:
-    graphqlEndpoint: "http://heimdall-internal-rpc-1.nine-chronicles.com/graphql"
-    genesisBlockHash: "729fa26958648a35b53e8e3905d11ec53b1b4929bf5f499884aed7df616f5913"
-
-  db:
-    local: true
-
-  kms:
-    keyId: "3a301c8e-96c5-4b13-8dee-16575ba637c6"
-    publicKey: "04d237239d672698c89fc0788918b4c8610de8b65c5d02ebf3e1f31dcb891683410a97b51f59c05c41c141ad3a05324ba2c5afe32d5e4909e63fd4a700cd36cc53"
-
-  serviceAccount:
-    roleArn: "arn:aws:iam::319679068466:role/heimdall-internal-9c-rudolf-signer"
-
-  service:
-    enabled: true
-    securityGroupIds:
-    - "sg-0c865006315f5b9f0"
-    - "sg-0343e5c4514681670"
+  enabled: false
 
 seed:
   count: 1
@@ -199,24 +169,12 @@ worldBoss:
     local: true
     size: 5Gi
 
-  worldBossEnv:
-    databaseUrl: ""
-    redisHost: ""
-    redisPort: ""
-    kmsKeyId: ""
-    slackToken: ""
-    celeryBrokerUrl: ""
-    celeryResultBackend: ""
-    slackSigningSecret: ""
-
 testHeadless1:
   enabled: true
   image:
     repository: planetariumhq/ninechronicles-headless
     pullPolicy: Always
     tag: "git-340af53a2c40049c2b202ed0a87b8841bd34f60b"
-
-  host: "heimdall-internal-test-1.nine-chronicles.com"
 
   ports:
     headless: 31234

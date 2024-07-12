@@ -1,5 +1,4 @@
 apps:
-  - remote-headless
   - data-provider
   - volume-rotator
   - market-service

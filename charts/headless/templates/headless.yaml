@@ -1,0 +1,287 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: {{ .Release.name }}
+    app.kubernetes.io/instance: {{ .Values.namespace }}
+  name: {{ .Release.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: {{ .Values.replicas | default 1 }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ .Release.name }}
+  serviceName: {{ .Release.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.name }}
+      name: {{ .Release.name }}
+    spec:
+      initContainers:
+        {{- if .Values.resetSnapshot }}
+        - args:
+          - 'https://snapshots.nine-chronicles.com/{{ .Values.snapshot.path }}'  
+          - /data/headless
+          - (RESET_SNAPSHOT_OPTION)
+          - {{ .Release.name }}
+          - (SLACK_WEBHOOK_URL)
+          - (SNAPSHOT_ROLLBACK_OPTION)
+          command:
+          - /bin/download_snapshot.sh
+          env:
+          - name: RESET_SNAPSHOT_OPTION  
+            value: "{{ .Values.resetSnapshot }}"
+          - name: SNAPSHOT_ROLLBACK_OPTION
+            value: "{{ .Values.rollbackSnapshot }}"
+          - name: SLACK_WEBHOOK_URL
+            valueFrom:
+              secretKeyRef:
+                key: slack-webhook-url
+                name: slack
+          {{- if and .Values.image.repository .Values.image.tag }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          {{- else }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          {{- end }}
+          imagePullPolicy: Always
+          name: reset-snapshot
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /bin/download_snapshot.sh
+            name: download-snapshot-script
+            readOnly: true
+            subPath: download_snapshot.sh
+          - mountPath: /data
+            name: {{ .Release.Name }}-data
+        {{- end }}
+        - command:
+            - sh
+            - '-c'
+            - >
+              apk --no-cache add curl
+
+              # Endpoint to check
+
+              SEED="http://{{ index .Values.seed.hosts 0 }}:{{ .Values.seed.ports.graphql }}/playground.html"
+
+              echo Checking: {SEED}
+
+              while [[ (curl --silent --output /dev/null --request GET
+              --write-out "%{http_code}" {SEED}) -ne 200 ]]; do
+                echo "Not ready"
+                sleep 5s
+              done
+
+              VALIDATOR="http://{{ .Values.validatorPath }}/ui/playground"
+
+              echo Checking: {VALIDATOR}
+
+              while [[ (curl --silent --output /dev/null --request GET
+              --write-out "%{http_code}" {VALIDATOR}) -ne 200 ]]; do
+                echo "Not ready"
+                sleep 5s
+              done
+
+              echo Ready
+          image: alpine
+          imagePullPolicy: Always
+          name: wait
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      containers:
+      - args:
+        - NineChronicles.Headless.Executable.dll
+        - run
+        - --app-protocol-version={{ .Values.appProtocolVersion }}
+        - --trusted-app-protocol-version-signer={{ .Values.trustedAppProtocolVersionSigner }}
+        - --genesis-block-path={{ .Values.genesisBlockPath }}
+        - --port={{ .Values.ports.headless }}
+        - --no-miner
+        - --store-type=rocksdb
+        - --store-path=/data/headless
+        {{- if .Values.useTurnServer }}
+        {{- range .Values.iceServers }}
+        - --ice-server={{ . }}
+        {{- end }}
+        {{- else }}
+        - --host={{ index .Values.host }}
+        {{- end }}
+        {{- range .Values.peerStrings }}
+        - --peer={{ . }}
+        {{- end }}
+        - --graphql-server
+        - --graphql-host=0.0.0.0
+        - --graphql-port={{ .Values.ports.graphql }}
+        - --rpc-server
+        - --rpc-remote-server
+        - --rpc-listen-host=0.0.0.0
+        - --rpc-listen-port={{ .Values.ports.rpc }}
+        - --no-cors
+        - --chain-tip-stale-behavior-type=reboot
+        - --tx-life-time=10
+        - --planet={{ .Values.planet }}
+        {{- if .Values.headlessAppsettingsPath }}
+        - --config={{ .Values.headlessAppsettingsPath }}
+        {{- end }}
+        {{- with .Values.extraArgs }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        command:
+        - dotnet
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: Always
+        name: {{ .Release.name }}
+        ports:
+        - containerPort: {{ .Values.ports.graphql }}
+          name: graphql
+          protocol: TCP
+        - containerPort: {{ .Values.ports.headless }}
+          name: headless
+          protocol: TCP
+        - containerPort: {{ .Values.ports.rpc }}
+          name: rpc
+          protocol: TCP
+        livenessProbe:
+          exec:
+            command:
+            {{- if eq .Values.networkType "Main"  }}
+            - /bin/liveness_probe.sh
+            {{- else }}
+            - /bin/liveness_probe.sh
+            {{- end }}
+          failureThreshold: 3
+          initialDelaySeconds: 1800
+          periodSeconds: 30
+          timeoutSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - /bin/readiness_probe.sh
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 10
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data
+          name: {{ .Release.Name }}-data
+        - mountPath: /bin/liveness_probe.sh
+          name: probe-script
+          readOnly: true
+          subPath: liveness_probe.sh
+        - mountPath: /bin/readiness_probe.sh
+          name: probe-script
+          readOnly: true
+          subPath: readiness_probe.sh
+        {{- if .Values.loggingEnabled }}
+        - mountPath: /app/logs
+          name: json-log
+        {{- end }}
+        - mountPath: /app/appsettings.configmap.json
+          name: appsettings
+          subPath: appsettings.json
+        env:
+          {{- if .Values.loggingEnabled }}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: NAMESPACE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: JSON_LOG_PATH
+            value: ./logs/(POD_NAME)_(NAMESPACE_NAME)_{{ .Release.name }}.json
+          {{- end }}
+        {{- with .Values.env }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 448
+          name: {{ .Values.namespace }}-probe-script
+        name: probe-script
+      - name: download-snapshot-script
+        configMap:
+          defaultMode: 0700
+          name: {{ .Values.namespace }}-download-snapshot-script
+      {{- if .Values.loggingEnabled }}
+      - hostPath:
+          path: /var/log/headless
+          type: DirectoryOrCreate
+        name: json-log
+      {{- end }}
+      - name: appsettings
+        configMap:
+          defaultMode: 0700
+          name: appsettings
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Release.Name }}-data
+    spec:
+      accessModes:
+      - {{ default "ReadWriteOnce" .Values.storage.accessModes }}
+      resources:
+        requests:
+          storage: {{ .Values.storage.data }}
+      storageClassName: {{ .Values.storage.class }}
+      volumeMode: Filesystem
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ .Values.namespace }}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: {{ .Values.certificate }}
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: stickiness.enabled=true,stickiness.type=source_ip,preserve_client_ip.enabled=true
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - name: graphql
+    port: {{ .Values.ports.graphql }}
+    targetPort: {{ .Values.ports.graphql }}
+  - name: rpc
+    port: {{ .Values.ports.rpc }}
+    targetPort: {{ .Values.ports.rpc }}
+  - name: headless
+    port: {{ .Values.ports.headless }}
+    targetPort: {{ .Values.ports.headless }}
+  - name: https
+    port: 443
+    targetPort: {{ .Values.ports.graphql }}
+  selector:
+    app: {{ .Release.name }}
+  type: LoadBalancer
+
+---

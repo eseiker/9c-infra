@@ -1,20 +1,20 @@
 {{- if not .Values.network }}
-{{- range $chartName := $.Values.apps }}
-{{- $key := $chartName | camelcase | untitle }}
-{{- $appValues := merge (index $.Values $key) (index $.Values.global $key) }}
+{{- $appValues := $.Values.remoteHeadless }}
+{{- range $idx := until (int $appValues.count) }}
+{{- $index := add $idx 1 }}
 {{- if $appValues.enabled }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: {{ $.Release.Name }}-{{ $chartName }}
+  name: {{ $.Release.Name }}-remote-headless-{{ $index }}
   namespace: argocd
 spec:
   project: {{ $.Release.Name }}
   source:
     repoURL: https://github.com/eseiker/9c-infra.git
     targetRevision: modular-headless
-    path: charts/{{ $chartName }}
+    path: charts/headless
     helm:
       values: |-
         namespace: {{ $.Release.Name }}

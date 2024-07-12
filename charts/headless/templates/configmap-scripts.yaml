@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap-scripts
+  namespace: {{ $.Release.Name }}
+  labels:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+data:
+  download_snapshot.sh: |- {{ tpl (.Files.Get "scripts/download_snapshot.sh") . | nindent 4 }}
+  liveness_probe.sh: |- {{ tpl (.Files.Get "scripts/liveness_probe.sh") . | nindent 4 }}
+  readiness_probe.sh: |- {{ tpl (.Files.Get "scripts/readiness_probe.sh") . | nindent 4 }}
