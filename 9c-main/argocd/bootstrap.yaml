@@ -164,6 +164,11 @@ spec:
           enabled: true
           replicaCount: 2
           nodeGroup: 9c-main-spot_2c
+        externalDns:
+          sources:
+            gateway:
+              enabled: true
+              experimental: true
         datadog:
           enabled: true
           tolerations:

@@ -114,6 +114,12 @@ spec:
         pyroscope:
           enabled: true
           nodeGroup: 9c-internal-spot_2c
+        externalDns:
+          addInternal: true
+          sources:
+            gateway:
+              enabled: true
+              experimental: true
 
   destination:
     server: https://kubernetes.default.svc

@@ -3,7 +3,9 @@ data:
   Corefile: |
     .:53 {
         errors
-        health
+        health {
+            lameduck 5s
+          }
         ready
         kubernetes cluster.local in-addr.arpa ip6.arpa {
           pods insecure
@@ -24,7 +26,6 @@ data:
         rewrite name heimdall-full-state.nine-chronicles.com main-full-state.heimdall.svc.cluster.local.
         rewrite name heimdall-jwt.nine-chronicles.com jwt-headless.heimdall.svc.cluster.local.
         {{- end }}
-
         {{- if eq $.Values.clusterName "9c-internal-v2" }}
         rewrite name regex odin-internal-tcp-seed-(\d+)\.nine-chronicles\.com\.$ tcp-seed-{1}.9c-network.svc.cluster.local.
         rewrite name regex odin-internal-rpc-(\d+)\.nine-chronicles\.com\.$ remote-headless-{1}.9c-network.svc.cluster.local.

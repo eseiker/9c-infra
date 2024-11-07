@@ -10,17 +10,22 @@ spec:
   source:
     repoURL: https://charts.bitnami.com/bitnami
     chart: external-dns
-    targetRevision: 8.3.9
+    targetRevision: {{ .Values.externalDns.targetRevision }}
     helm:
       values: |-
         sources:
           - service
           - ingress
+          {{- if .Values.externalDns.sources.gateway.enabled }}
           - gateway-httproute
           - gateway-grpcroute
+          {{- if .Values.externalDns.sources.gateway.experimental }}
           - gateway-tcproute
+          {{- end }}
+          {{- end }}
         aws:
           region: {{ .Values.region }}
+          zoneType: public
         policy: sync
         txtOwnerId: "{{ .Values.clusterName }}"
         serviceAccount:
@@ -33,3 +38,46 @@ spec:
     automated:
       prune: true
       selfHeal: true
+---
+{{- if .Values.externalDns.addInternal }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  namespace: argocd
+  name: external-dns-internal
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: external-dns
+    targetRevision: {{ .Values.externalDns.targetRevision }}
+    helm:
+      values: |-
+        sources:
+          - service
+          - ingress
+          {{- if .Values.externalDns.sources.gateway.enabled }}
+          - gateway-httproute
+          - gateway-grpcroute
+          {{- if .Values.externalDns.sources.gateway.experimental }}
+          - gateway-tcproute
+          {{- end }}
+          {{- end }}
+        aws:
+          region: {{ .Values.region }}
+          zoneType: private
+        policy: sync
+        txtOwnerId: "{{ .Values.clusterName }}-internal"
+        serviceAccount:
+          annotations:
+            eks.amazonaws.com/role-arn: arn:aws:iam::{{ .Values.accountId }}:role/eks-{{ .Values.clusterName }}-external-dns
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+{{- end }}

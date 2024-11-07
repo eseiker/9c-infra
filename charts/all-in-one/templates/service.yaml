@@ -13,8 +13,9 @@ metadata:
     {{- end }}
     service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: stickiness.enabled=true,stickiness.type=source_ip,preserve_client_ip.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Environment={{- if eq $.Values.clusterName "9c-main-v2" }}production{{- else }}development{{- end }},Team=game,Owner=jihyung,Service={{ $.Release.Name }},Name=tcp-seed-{{ $index }}
-    {{- if index $.Values.seed.hosts $idx }}
-    external-dns.alpha.kubernetes.io/hostname: {{ index $.Values.seed.hosts $idx }}
+    {{- with index $.Values.seed.hosts $idx }}
+    external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
     {{- end }}
 spec:
@@ -54,8 +55,9 @@ metadata:
     {{- end }}
     service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: stickiness.enabled=true,stickiness.type=source_ip,preserve_client_ip.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Environment={{- if eq $.Values.clusterName "9c-main-v2" }}production{{- else }}development{{- end }},Team=game,Owner=jihyung,Service={{ $.Release.Name }},Name=remote-headless-{{ $index }}
-    {{- if index $.Values.remoteHeadless.hosts $idx }}
-    external-dns.alpha.kubernetes.io/hostname: {{ index $.Values.remoteHeadless.hosts $idx }}
+    {{- with index $.Values.remoteHeadless.hosts $idx }}
+    external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
     {{- end }}
 spec:
@@ -211,6 +213,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Environment={{- if eq $.Values.clusterName "9c-main-v2" }}production{{- else }}development{{- end }},Team=game,Owner=jihyung,Service={{ $.Release.Name }},Name=main-full-state
     {{- with $.Values.fullState.host }}
     external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
     {{- end }}
 spec:
@@ -252,6 +255,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Environment={{- if eq $.Values.clusterName "9c-main-v2" }}production{{- else }}development{{- end }},Team=game,Owner=jihyung,Service={{ $.Release.Name }},Name=test-headless-1
     {{- with $.Values.testHeadless1.host }}
     external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
     {{- end }}
 spec:
@@ -293,6 +297,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Environment={{- if eq $.Values.clusterName "9c-main-v2" }}production{{- else }}development{{- end }},Team=game,Owner=jihyung,Service={{ $.Release.Name }},Name=test-headless-2
     {{- with $.Values.testHeadless2.host }}
     external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
     {{- end }}
 spec:
@@ -334,6 +339,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Environment={{- if eq $.Values.clusterName "9c-main-v2" }}production{{- else }}development{{- end }},Team=game,Owner=jihyung,Service={{ $.Release.Name }},Name=jwt-headless
     {{- with $.Values.jwtHeadless.host }}
     external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
     {{- end }}
 spec:
@@ -555,8 +561,9 @@ metadata:
     {{- end }}
     service.beta.kubernetes.io/aws-load-balancer-target-group-attributes: stickiness.enabled=true,stickiness.type=source_ip,preserve_client_ip.enabled=true
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Environment={{- if eq $.Values.clusterName "9c-main-v2" }}production{{- else }}development{{- end }},Team=game,Owner=jihyung,Service={{ $.Release.Name }},Name=validator-{{ $index }}
-    {{- if index $.Values.validator.hosts $idx }}
-    external-dns.alpha.kubernetes.io/hostname: {{ index $.Values.validator.hosts $idx }}
+    {{- with index $.Values.validator.hosts $idx }}
+    external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
     {{- end }}
 spec:

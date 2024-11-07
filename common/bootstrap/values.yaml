@@ -61,3 +61,11 @@ datadog:
   nodeGroup: ""
   tolerations: []
   affinity: {}
+
+externalDns:
+  targetRevision: 8.3.9
+  addInternal: false
+  sources:
+    gateway:
+      enabled: false
+      experimental: false

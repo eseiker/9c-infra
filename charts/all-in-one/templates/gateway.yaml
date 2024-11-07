@@ -35,9 +35,6 @@ spec:
             labelselector: app.kubernetes.io/instance=traefik-{{ $.Release.Name }}
         gatewayClass:
           name: traefik-{{ $.Release.Name }}
-        globalArguments:
-          - --providers.kubernetesgateway.statusaddress.service.name=traefik-{{ $.Release.Name }}
-          - --providers.kubernetesgateway.statusaddress.service.namespace={{ $.Release.Name }}
         service:
           annotations:
             {{- with $.Values.global.service.annotations }}
@@ -89,11 +86,10 @@ metadata:
   name: gateway-route-{{ $service.name }}-{{ $protocol }}
   namespace: {{ $.Release.Name }}
   annotations:
-    {{- if eq $obj.kind "TCPRoute" }}
     {{- with $service.hostname }}
     external-dns.alpha.kubernetes.io/hostname: {{ . }}
+    external-dns.alpha.kubernetes.io/internal-hostname: {{ . }}
     external-dns.alpha.kubernetes.io/ttl: '60'
-    {{- end }}
     {{- end }}
 spec:
   parentRefs:
@@ -102,9 +98,7 @@ spec:
     sectionName: {{ $protocol }}
   {{- if not (eq $obj.kind "TCPRoute") }}
   hostnames:
-    {{- with ($service.hostnames | default (list $service.hostname)) }}
-    {{ toYaml . | nindent 4 }}
-    {{- end }}
+    - {{ $service.hostname }}
   {{- end }}
   rules:
     - backendRefs:
