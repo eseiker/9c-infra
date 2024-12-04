@@ -122,8 +122,9 @@
         "http://thor-patrol.9c.gg/graphql"
       ],
       "arena.gql": [
-        "http://thor-arena.9c.gg/graphql"
-      ]
+        1337
+      ],
+      "schema": "test"
     },
     "bridges": {
       "0x000000000000": {
