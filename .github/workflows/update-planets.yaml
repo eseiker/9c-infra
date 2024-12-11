@@ -33,5 +33,18 @@ jobs:
       - run: |
           FILES=(${{ steps.paths.outputs.planets_files }})
           for FILE in "${FILES[@]}"; do
-            echo "$FILE"
+            REGISTRY=$(echo "$FILE" | sed -r 's/planets\/(.+)\.json$/\1/')
+            DIR="planets"
+            if [[ $REGISTRY == "mainnet" ]]; then
+              BUCKET="planets.nine-chronicles.com"
+              CF_DISTRIBUTION_ID="EP1JH2OWQMIKM"
+            else
+              BUCKET="planets-internal.nine-chronicles.com"
+              CF_DISTRIBUTION_ID="E2HIZ6JDZX0BEQ"
+              if [[ $REGISTRY == "preview" ]]; then
+                DIR="planets-preview"
+              fi
+            fi
+            aws s3 cp $FILE s3://$BUCKET/$DIR/ci-test.json
+            aws cloudfront create-invalidation --distribution-id $CF_DISTRIBUTION_ID --paths "/$DIR"
           done
