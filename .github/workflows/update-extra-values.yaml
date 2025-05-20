@@ -1,0 +1,58 @@
+name: Update extra values
+on:
+  workflow_dispatch:
+    inputs:
+      dir:
+        required: true
+        description: 'Dir'
+        default: '9c-internal'
+        type: choice
+        options:
+        - 9c-main
+        - 9c-internal
+      selector:
+        required: true
+        description: 'Value to update'
+        type: choice
+        options:
+        - petpop | .server.image.tag / .backoffice.image.tag
+        - petpop | .workers.image.tag
+        - portal | .portalService.image.tag
+        - portal | .backofficeService.image.tag
+      value:
+        required: true
+        description: 'Value'
+        type: string
+
+jobs:
+  update-values-file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update values and create PR
+        run: |
+          DIR="${{ github.event.inputs.dir }}"
+          SELECTOR="${{ github.event.inputs.selector }}"
+          VALUE="${{ github.event.inputs.value }}"
+          SERVICE=$(echo "${SELECTOR}" | cut -d '|' -f 1 | xargs)
+          SELECTOR=$(echo "${SELECTOR}" | cut -d '|' -f 2 | sed 's/\//,/g' | xargs)
+          
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+          yq -i "(${SELECTOR}) = \"${VALUE}\"" "${DIR}/${SERVICE}/values.yaml"
+
+          BRANCH_NAME="update-${DIR}-values-$(date +%s)"
+          git switch -c "${BRANCH_NAME}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${DIR}/${SERVICE}/values.yaml"
+          git commit -m "Update ${DIR}/${SERVICE}/values.yaml" --no-verify
+
+          gh pr create \
+            --title "Update ${DIR}/${SERVICE}/values.yaml" \
+            --body "Update ${DIR}/${SERVICE}/values.yaml" \
+            --base main \
+            --head "${BRANCH_NAME}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.P_GITHUB_TOKEN }}
